@@ -1,0 +1,1064 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+    <title>Aprender Cloudflare y Redes desde cero by Rubén Sbarsky</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            bg: '#0a0e1a',
+                            card: '#0f172a',
+                            border: '#1e3a5f',
+                            accent: '#38bdf8',
+                            hover: '#0284c7',
+                            text: '#e2e8f0',
+                            muted: '#94a3b8'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Fira+Code:wght@400;500&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #0a0e1a; color: #e2e8f0; }
+        code, pre { font-family: 'Fira Code', monospace; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+        /* Estilos específicos para impresión profesional A4 */
+        @media print {
+            body { background: #ffffff !important; color: #000000 !important; }
+            nav, .fixed-nav-bar, .float-btn, button, .no-print { display: none !important; }
+            .tab-content { display: block !important; page-break-after: always; opacity: 1 !important; transform: none !important; }
+            .card, pre, code { background: #f8fafc !important; color: #0f172a !important; border: 1px solid #cbd5e1 !important; }
+            a { color: #2563eb !important; text-decoration: underline; }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col antialiased selection:bg-sky-500 selection:text-white">
+
+    <!-- BARRA DE PROGRESO DE LECTURA -->
+    <div id="read-progress" class="fixed top-0 left-0 h-1 bg-sky-400 z-50 transition-all duration-150" style="width: 0%"></div>
+
+    <!-- NAVEGACIÓN SUPERIOR FIJA / CHIPS -->
+    <header class="sticky top-0 z-40 bg-[#0a0e1a]/90 backdrop-blur-md border-b border-[#1e3a5f] shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
+            <div class="flex items-center gap-2">
+                <!-- BOTÓN MENÚ SÁNDWICH ÍNDICE -->
+                <button id="mb" aria-label="Abrir índice" aria-expanded="false" class="flex items-center gap-2 px-3 py-2 bg-[#0f172a] hover:bg-[#1e3a5f] border border-[#1e3a5f] rounded-xl text-sky-400 font-medium text-sm transition shadow-sm min-h-[42px] shrink-0">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+                    <span class="hidden sm:inline">Índice</span>
+                </button>
+                <div class="text-lg font-bold bg-gradient-to-r from-sky-400 to-indigo-400 bg-clip-text text-transparent truncate max-w-[180px] sm:max-w-xs">Cloudflare Zero</div>
+            </div>
+
+            <!-- CHIPS DE NAVEGACIÓN DE PESTAÑAS (Nombres relacionados con el contenido) -->
+            <nav id="nav-tabs" class="flex items-center gap-2 overflow-x-auto no-scrollbar py-1 px-1">
+                <button data-tab="inicio" class="tab-btn px-4 py-2 rounded-xl text-sm font-medium transition whitespace-nowrap bg-sky-500 text-slate-950 shadow-md min-h-[42px]">Inicio</button>
+                <button data-tab="fundamentos" class="tab-btn px-4 py-2 rounded-xl text-sm font-medium transition whitespace-nowrap bg-[#0f172a] text-slate-300 hover:bg-[#1e3a5f] border border-[#1e3a5f] min-h-[42px]">Fundamentos y Red</button>
+                <button data-tab="dns" class="tab-btn px-4 py-2 rounded-xl text-sm font-medium transition whitespace-nowrap bg-[#0f172a] text-slate-300 hover:bg-[#1e3a5f] border border-[#1e3a5f] min-h-[42px]">DNS y Registros</button>
+                <button data-tab="arquitectura" class="tab-btn px-4 py-2 rounded-xl text-sm font-medium transition whitespace-nowrap bg-[#0f172a] text-slate-300 hover:bg-[#1e3a5f] border border-[#1e3a5f] min-h-[42px]">Cloudflare y Proxy</button>
+                <button data-tab="publicacion" class="tab-btn px-4 py-2 rounded-xl text-sm font-medium transition whitespace-nowrap bg-[#0f172a] text-slate-300 hover:bg-[#1e3a5f] border border-[#1e3a5f] min-h-[42px]">Webs y Workers</button>
+                <button data-tab="seguridad" class="tab-btn px-4 py-2 rounded-xl text-sm font-medium transition whitespace-nowrap bg-[#0f172a] text-slate-300 hover:bg-[#1e3a5f] border border-[#1e3a5f] min-h-[42px]">Seguridad y WAF</button>
+                <button data-tab="rendimiento" class="tab-btn px-4 py-2 rounded-xl text-sm font-medium transition whitespace-nowrap bg-[#0f172a] text-slate-300 hover:bg-[#1e3a5f] border border-[#1e3a5f] min-h-[42px]">Rendimiento y Caché</button>
+                <button data-tab="avanzado" class="tab-btn px-4 py-2 rounded-xl text-sm font-medium transition whitespace-nowrap bg-[#0f172a] text-slate-300 hover:bg-[#1e3a5f] border border-[#1e3a5f] min-h-[42px]">API y Automatización</button>
+                <button data-tab="diagnostico" class="tab-btn px-4 py-2 rounded-xl text-sm font-medium transition whitespace-nowrap bg-[#0f172a] text-slate-300 hover:bg-[#1e3a5f] border border-[#1e3a5f] min-h-[42px]">Diagnóstico Errores</button>
+                <button data-tab="preguntas" class="tab-btn px-4 py-2 rounded-xl text-sm font-medium transition whitespace-nowrap bg-[#0f172a] text-slate-300 hover:bg-[#1e3a5f] border border-[#1e3a5f] min-h-[42px]">33 Preguntas (Q&A)</button>
+                <button data-tab="errores" class="tab-btn px-4 py-2 rounded-xl text-sm font-medium transition whitespace-nowrap bg-[#0f172a] text-slate-300 hover:bg-[#1e3a5f] border border-[#1e3a5f] min-h-[42px]">Errores Frecuentes</button>
+                <button data-tab="prompts" class="tab-btn px-4 py-2 rounded-xl text-sm font-medium transition whitespace-nowrap bg-[#0f172a] text-slate-300 hover:bg-[#1e3a5f] border border-[#1e3a5f] min-h-[42px]">Prompts Maestros</button>
+                <button data-tab="glosario" class="tab-btn px-4 py-2 rounded-xl text-sm font-medium transition whitespace-nowrap bg-[#0f172a] text-slate-300 hover:bg-[#1e3a5f] border border-[#1e3a5f] min-h-[42px]">Glosario y Fuentes</button>
+                <button data-tab="creditos" class="tab-btn px-4 py-2 rounded-xl text-sm font-medium transition whitespace-nowrap bg-[#0f172a] text-slate-300 hover:bg-[#1e3a5f] border border-[#1e3a5f] min-h-[42px]">Créditos</button>
+            </nav>
+        </div>
+    </header>
+
+    <!-- PANEL LATERAL SÁNDWICH (ÍNDICE) -->
+    <div id="dr" class="fixed top-[58px] left-0 bottom-0 w-[min(330px,88vw)] bg-[#0f172a] border-r border-[#1e3a5f] -translate-x-full transition-transform duration-300 z-30 overflow-y-auto p-4 shadow-2xl">
+        <div class="flex items-center justify-between pb-3 mb-3 border-b border-[#1e3a5f]">
+            <h3 class="font-bold text-sky-400 text-base">Índice General</h3>
+            <button onclick="toggleDrawer(false)" class="text-slate-400 hover:text-white p-2 min-h-[44px] min-w-[44px] flex items-center justify-center">✕</button>
+        </div>
+        <div id="drawer-links" class="space-y-1">
+            <!-- Se generará dinámicamente con JS -->
+        </div>
+    </div>
+
+    <!-- CONTENEDOR PRINCIPAL -->
+    <main class="flex-1 max-w-5xl w-full mx-auto px-4 py-6 sm:py-10">
+
+        <!-- 1. PESTAÑA INICIO -->
+        <section id="inicio" class="tab-content active space-y-8" data-t="Inicio y Mapa de Aprendizaje">
+            <div class="bg-gradient-to-br from-[#0f172a] to-[#1e3a5f]/40 border border-[#1e3a5f] rounded-3xl p-6 sm:p-10 shadow-xl relative overflow-hidden">
+                <div class="absolute -right-12 -top-12 w-64 h-64 bg-sky-500/10 rounded-full blur-3xl pointer-events-none"></div>
+                <div class="relative z-10 space-y-6">
+                    <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-sky-500/10 border border-sky-500/20 text-sky-400 text-xs font-semibold uppercase tracking-wider">
+                        Tutorial Definitivo de Agencia
+                    </div>
+                    <h1 class="text-3xl sm:text-5xl font-extrabold tracking-tight text-white">
+                        Aprender Cloudflare y Redes desde Cero <span class="block text-sky-400 text-2xl sm:text-3xl font-semibold mt-2">by Rubén Sbarsky</span>
+                    </h1>
+                    <p class="text-slate-300 text-base sm:text-lg leading-relaxed max-w-3xl">
+                        Una guía práctica, rigurosa y explicada sin prisas para dominar Internet, DNS, la red perimetral de Cloudflare, la seguridad WAF y el despliegue moderno de aplicaciones con Workers, optimizada para su uso fluido en teléfonos móviles y ordenadores.
+                    </p>
+
+                    <!-- SVG HERO ANIMADO COMPARTIDO -->
+                    <div class="my-6 p-4 bg-[#0a0e1a]/80 border border-[#1e3a5f] rounded-2xl flex flex-col items-center justify-center shadow-inner">
+                        <div id="hero-svg-container" class="w-full max-w-md h-64 flex items-center justify-center" aria-label="Ilustración animada de Cloudflare, red perimetral y seguridad">
+                            <!-- El SVG se inyectará dinámicamente desde la plantilla única -->
+                        </div>
+                        <p class="text-xs text-slate-400 mt-2 text-center">Esquema animado: Tráfico global protegido por la red Anycast y Workers de Cloudflare.</p>
+                    </div>
+
+                    <div class="flex flex-wrap gap-4 pt-4">
+                        <button onclick="switchTab('fundamentos')" class="px-6 py-3 bg-sky-500 hover:bg-sky-400 text-slate-950 font-semibold rounded-xl shadow-lg transition flex items-center gap-2 min-h-[44px]">
+                            Comenzar Tutorial <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path></svg>
+                        </button>
+                        <button onclick="toggleDrawer(true)" class="px-6 py-3 bg-[#0f172a] hover:bg-[#1e3a5f] text-slate-200 border border-[#1e3a5f] font-semibold rounded-xl transition flex items-center gap-2 min-h-[44px]">
+                            ☰ Ver Índice Lateral
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CARACTERÍSTICAS DEL TUTORIAL -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                <div class="bg-[#0f172a] border border-[#1e3a5f] p-6 rounded-2xl shadow-lg space-y-3">
+                    <div class="w-10 h-10 rounded-xl bg-sky-500/10 text-sky-400 flex items-center justify-center font-bold text-lg">01</div>
+                    <h3 class="text-lg font-bold text-white">100% Desde Cero</h3>
+                    <p class="text-sm text-slate-400 leading-relaxed">Sin dar por sentado ningún término técnico. Cada concepto se explica rigurosamente la primera vez que aparece.</p>
+                </div>
+                <div class="bg-[#0f172a] border border-[#1e3a5f] p-6 rounded-2xl shadow-lg space-y-3">
+                    <div class="w-10 h-10 rounded-xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center font-bold text-lg">02</div>
+                    <h3 class="text-lg font-bold text-white">Enfoque Práctico</h3>
+                    <p class="text-sm text-slate-400 leading-relaxed">Ejercicios guiados paso a paso para terminal (PowerShell y WSL), consola, despliegues y verificación real.</p>
+                </div>
+                <div class="bg-[#0f172a] border border-[#1e3a5f] p-6 rounded-2xl shadow-lg space-y-3">
+                    <div class="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center font-bold text-lg">03</div>
+                    <h3 class="text-lg font-bold text-white">QA Riguroso (Q&A)</h3>
+                    <p class="text-sm text-slate-400 leading-relaxed">33 Preguntas y Respuestas divididas por dificultad con despliegue global para afianzar el conocimiento de agencia.</p>
+                </div>
+            </div>
+
+            <div class="flex justify-end pt-6">
+                <button onclick="switchTab('fundamentos')" class="next-tab-btn px-5 py-3 bg-[#1e3a5f] hover:bg-sky-600 text-white rounded-xl font-medium transition flex items-center gap-2 min-h-[44px]">
+                    Siguiente: Fundamentos y Red <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                </button>
+            </div>
+        </section>
+
+        <!-- 2. PESTAÑA FUNDAMENTOS Y RED -->
+        <section id="fundamentos" class="tab-content space-y-6" data-t="Fundamentos y Red">
+            <h2 class="text-2xl sm:text-3xl font-bold text-white border-b border-[#1e3a5f] pb-3">Internet Explicado desde Cero</h2>
+            <p class="text-slate-300 leading-relaxed">
+                Antes de configurar Cloudflare, debemos comprender con precisión quirúrgica qué es Internet, qué diferencia hay entre red y web, y qué ocurre exactamente cuando un usuario visita una dirección en su navegador.
+            </p>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 my-6">
+                <div class="bg-[#0f172a] border border-[#1e3a5f] p-6 rounded-2xl space-y-3">
+                    <h3 class="text-lg font-semibold text-sky-400">Internet vs. La Web</h3>
+                    <p class="text-sm text-slate-300 leading-relaxed">
+                        <strong>Internet</strong> es la infraestructura física global de cables submarinos, routers, antenas y equipos interconectados. <strong>La Web</strong> es un servicio que corre sobre esa infraestructura: el conjunto de páginas y documentos hipertextuales accesibles mediante navegadores usando HTTP/HTTPS.
+                    </p>
+                </div>
+                <div class="bg-[#0f172a] border border-[#1e3a5f] p-6 rounded-2xl space-y-3">
+                    <h3 class="text-lg font-semibold text-sky-400">Cliente, Servidor y IP</h3>
+                    <p class="text-sm text-slate-300 leading-relaxed">
+                        El <strong>cliente</strong> (tu móvil o PC) solicita recursos. El <strong>servidor</strong> es un ordenador remoto siempre encendido que responde a esas peticiones. Cada dispositivo posee una dirección <strong>IP</strong> numérica (como <code class="text-sky-300">192.0.2.1</code> en IPv4 o formato IPv6) que funciona como la matrícula única en la red.
+                    </p>
+                </div>
+            </div>
+
+            <div class="bg-[#0f172a] border border-[#1e3a5f] p-6 rounded-2xl space-y-4">
+                <h3 class="text-lg font-bold text-white">Práctica 1.1: Inspeccionar Peticiones de Red</h3>
+                <ol class="list-decimal list-inside space-y-2 text-sm text-slate-300">
+                    <li>Abre tu navegador en el ordenador o móvil y entra a una página web.</li>
+                    <li>Pulsa <kbd class="px-2 py-1 bg-[#1e3a5f] rounded text-sky-300 font-mono text-xs">F12</kbd> para abrir las Herramientas de Desarrollador.</li>
+                    <li>Selecciona la pestaña <strong>Network (Red)</strong>.</li>
+                    <li>Recarga la página (<kbd class="px-2 py-1 bg-[#1e3a5f] rounded text-sky-300 font-mono text-xs">Ctrl + R</kbd>). Observa cómo cada recurso (HTML, imágenes, scripts) genera una petición independiente con su código de estado HTTP (<code class="text-emerald-400">200 OK</code>, <code class="text-amber-400">404 Not Found</code>, etc.).</li>
+                </ol>
+            </div>
+
+            <div class="flex items-center justify-between pt-6 border-t border-[#1e3a5f]">
+                <button onclick="switchTab('inicio')" class="px-5 py-3 bg-[#0f172a] hover:bg-[#1e3a5f] text-slate-300 border border-[#1e3a5f] rounded-xl font-medium transition flex items-center gap-2 min-h-[44px]">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg> Anterior
+                </button>
+                <button onclick="switchTab('dns')" class="px-5 py-3 bg-[#1e3a5f] hover:bg-sky-600 text-white rounded-xl font-medium transition flex items-center gap-2 min-h-[44px]">
+                    Siguiente: DNS y Registros <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                </button>
+            </div>
+        </section>
+
+        <!-- 3. PESTAÑA DNS Y REGISTROS -->
+        <section id="dns" class="tab-content space-y-6" data-t="DNS y Registros">
+            <h2 class="text-2xl sm:text-3xl font-bold text-white border-b border-[#1e3a5f] pb-3">DNS: La Agenda de Contactos de Internet</h2>
+            <p class="text-slate-300 leading-relaxed">
+                El Sistema de Nombres de Dominio (<strong class="text-sky-400">DNS</strong>) traduce nombres legibles como <code class="text-sky-300">ejemplo.com</code> a direcciones IP numéricas. Sin él, tendríamos que memorizar números IP para cada servicio web.
+            </p>
+
+            <div class="overflow-x-auto my-4 border border-[#1e3a5f] rounded-2xl bg-[#0f172a]">
+                <table class="w-full text-left border-collapse text-sm">
+                    <thead>
+                        <tr class="bg-[#1e3a5f]/40 border-b border-[#1e3a5f] text-sky-400">
+                            <th class="p-3">Tipo</th>
+                            <th class="p-3">Función Principal</th>
+                            <th class="p-3">Ejemplo de Uso</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-[#1e3a5f] text-slate-300">
+                        <tr><td class="p-3 font-mono font-bold text-sky-300">A</td><td class="p-3">Asocia un dominio a una dirección IPv4.</td><td class="p-3 font-mono text-xs">ejemplo.com → 203.0.113.10</td></tr>
+                        <tr><td class="p-3 font-mono font-bold text-sky-300">AAAA</td><td class="p-3">Asocia un dominio a una dirección IPv6.</td><td class="p-3 font-mono text-xs">ejemplo.com → 2001:db8::1</td></tr>
+                        <tr><td class="p-3 font-mono font-bold text-sky-300">CNAME</td><td class="p-3">Crea un alias apuntando un nombre a otro dominio.</td><td class="p-3 font-mono text-xs">www → ejemplo.com</td></tr>
+                        <tr><td class="p-3 font-mono font-bold text-sky-300">MX</td><td class="p-3">Define los servidores de correo electrónico del dominio.</td><td class="p-3 font-mono text-xs">10 mail.proveedor.com</td></tr>
+                        <tr><td class="p-3 font-mono font-bold text-sky-300">TXT</td><td class="p-3">Almacena texto libre para verificación y seguridad (SPF, DKIM, DMARC).</td><td class="p-3 font-mono text-xs">"v=spf1 include..."</td></tr>
+                        <tr><td class="p-3 font-mono font-bold text-sky-300">NS</td><td class="p-3">Indica qué servidores de nombres autoritativos gestionan la zona.</td><td class="p-3 font-mono text-xs">ns.cloudflare.com</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="bg-[#0f172a] border border-[#1e3a5f] p-6 rounded-2xl space-y-3">
+                <h3 class="text-lg font-bold text-white">Práctica 2.1: Consultar Registros DNS por Terminal</h3>
+                <p class="text-sm text-slate-300">Abre PowerShell (Windows) o tu terminal WSL/Linux y ejecuta las siguientes consultas de diagnóstico:</p>
+                
+                <div class="relative bg-slate-950 p-4 rounded-xl border border-[#1e3a5f]">
+                    <button onclick="copyCode(this)" class="absolute top-3 right-3 px-2.5 py-1 bg-[#1e3a5f] hover:bg-sky-600 text-xs rounded text-white transition">Copiar</button>
+                    <pre class="text-xs text-sky-300 overflow-x-auto"><code># Consultar registros IP asociados a un dominio
+nslookup example.com
+
+# Consultar nameservers usando el resolutor público global 1.1.1.1 de Cloudflare
+nslookup -type=ns example.com 1.1.1.1</code></pre>
+                </div>
+            </div>
+
+            <div class="flex items-center justify-between pt-6 border-t border-[#1e3a5f]">
+                <button onclick="switchTab('fundamentos')" class="px-5 py-3 bg-[#0f172a] hover:bg-[#1e3a5f] text-slate-300 border border-[#1e3a5f] rounded-xl font-medium transition flex items-center gap-2 min-h-[44px]">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg> Anterior
+                </button>
+                <button onclick="switchTab('arquitectura')" class="px-5 py-3 bg-[#1e3a5f] hover:bg-sky-600 text-white rounded-xl font-medium transition flex items-center gap-2 min-h-[44px]">
+                    Siguiente: Cloudflare y Proxy <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                </button>
+            </div>
+        </section>
+
+        <!-- 4. PESTAÑA CLOUDFLARE Y PROXY -->
+        <section id="arquitectura" class="tab-content space-y-6" data-t="Cloudflare y Proxy">
+            <h2 class="text-2xl sm:text-3xl font-bold text-white border-b border-[#1e3a5f] pb-3">Cloudflare: Qué es y Cómo Funciona el Proxy Inverso</h2>
+            <p class="text-slate-300 leading-relaxed">
+                Cloudflare opera como una inmensa red perimetral (<span class="text-sky-400">Edge Network</span>) distribuida por todo el planeta con tecnología Anycast. Se sitúa entre tus visitantes y tu servidor de origen para acelerar la entrega y bloquear amenazas en el perímetro.
+            </p>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 my-6">
+                <div class="bg-[#0f172a] border border-[#1e3a5f] p-6 rounded-2xl space-y-3">
+                    <h3 class="text-lg font-semibold text-sky-400">Nube Naranja (Proxied)</h3>
+                    <p class="text-sm text-slate-300 leading-relaxed">
+                        El tráfico web pasa por los servidores de Cloudflare. Se activa la protección DDoS, caché global, reglas de seguridad WAF y optimización SSL/TLS. El visitante no ve la IP real de tu servidor.
+                    </p>
+                </div>
+                <div class="bg-[#0f172a] border border-[#1e3a5f] p-6 rounded-2xl space-y-3">
+                    <h3 class="text-lg font-semibold text-sky-400">Nube Gris (DNS Only)</h3>
+                    <p class="text-sm text-slate-300 leading-relaxed">
+                        Cloudflare responde únicamente a las peticiones DNS devolviendo la IP directa de tu servidor de origen. Es obligatorio para registros de correo (MX) y servicios que no admiten proxy web.
+                    </p>
+                </div>
+            </div>
+
+            <div class="bg-[#0f172a] border border-[#1e3a5f] p-6 rounded-2xl space-y-4">
+                <h3 class="text-lg font-bold text-white">Modos de Cifrado SSL/TLS</h3>
+                <ul class="list-disc list-inside space-y-2 text-sm text-slate-300">
+                    <li><strong>Off / Flexible:</strong> Cifrado parcial entre usuario y Cloudflare, pero sin cifrar entre Cloudflare y el origen (no recomendado).</li>
+                    <li><strong>Full / Full (Strict):</strong> Cifrado extremo a extremo. <strong class="text-sky-300">Full (Strict)</strong> valida obligatoriamente que el certificado SSL del servidor de origen sea legítimo y de confianza (puedes usar certificados gratuitos Cloudflare Origin CA).</li>
+                </ul>
+            </div>
+
+            <div class="flex items-center justify-between pt-6 border-t border-[#1e3a5f]">
+                <button onclick="switchTab('dns')" class="px-5 py-3 bg-[#0f172a] hover:bg-[#1e3a5f] text-slate-300 border border-[#1e3a5f] rounded-xl font-medium transition flex items-center gap-2 min-h-[44px]">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg> Anterior
+                </button>
+                <button onclick="switchTab('publicacion')" class="px-5 py-3 bg-[#1e3a5f] hover:bg-sky-600 text-white rounded-xl font-medium transition flex items-center gap-2 min-h-[44px]">
+                    Siguiente: Webs y Workers <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                </button>
+            </div>
+        </section>
+
+        <!-- 5. PESTAÑA WEBS Y WORKERS -->
+        <section id="publicacion" class="tab-content space-y-6" data-t="Webs y Workers">
+            <h2 class="text-2xl sm:text-3xl font-bold text-white border-b border-[#1e3a5f] pb-3">Publicar Sitios Web Estáticos y Cloudflare Workers</h2>
+            <p class="text-slate-300 leading-relaxed">
+                Cloudflare Workers permite ejecutar código JavaScript, TypeScript o Python directamente en su red global perimetral sin gestionar servidores tradicionales. Las peticiones a archivos estáticos en Workers son completamente gratuitas e ilimitadas.
+            </p>
+
+            <div class="bg-[#0f172a] border border-[#1e3a5f] p-6 rounded-2xl space-y-4">
+                <h3 class="text-lg font-bold text-white">Práctica 6.1: Crear y Desplegar una Web con Wrangler CLI</h3>
+                <p class="text-sm text-slate-300">Asegúrate de tener Node.js instalado en tu terminal y ejecuta los comandos oficiales de inicialización de Cloudflare:</p>
+                
+                <div class="relative bg-slate-950 p-4 rounded-xl border border-[#1e3a5f]">
+                    <button onclick="copyCode(this)" class="absolute top-3 right-3 px-2.5 py-1 bg-[#1e3a5f] hover:bg-sky-600 text-xs rounded text-white transition">Copiar</button>
+                    <pre class="text-xs text-sky-300 overflow-x-auto"><code># 1. Verificar versión de Node.js
+node --version
+
+# 2. Inicializar un proyecto de sitio estático con C3
+npm create cloudflare@latest -- mi-primera-web
+# Responde: Hello World example -> Static site -> TypeScript/JavaScript -> No deploy aún
+
+# 3. Entrar a la carpeta y probar en local (http://localhost:8787)
+cd mi-primera-web
+npx wrangler dev
+
+# 4. Desplegar a producción en red global workers.dev
+npx wrangler deploy</code></pre>
+                </div>
+            </div>
+
+            <div class="flex items-center justify-between pt-6 border-t border-[#1e3a5f]">
+                <button onclick="switchTab('arquitectura')" class="px-5 py-3 bg-[#0f172a] hover:bg-[#1e3a5f] text-slate-300 border border-[#1e3a5f] rounded-xl font-medium transition flex items-center gap-2 min-h-[44px]">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg> Anterior
+                </button>
+                <button onclick="switchTab('seguridad')" class="px-5 py-3 bg-[#1e3a5f] hover:bg-sky-600 text-white rounded-xl font-medium transition flex items-center gap-2 min-h-[44px]">
+                    Siguiente: Seguridad y WAF <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                </button>
+            </div>
+        </section>
+
+        <!-- 6. PESTAÑA SEGURIDAD Y WAF -->
+        <section id="seguridad" class="tab-content space-y-6" data-t="Seguridad y WAF">
+            <h2 class="text-2xl sm:text-3xl font-bold text-white border-b border-[#1e3a5f] pb-3">Seguridad Web Esencial y WAF</h2>
+            <p class="text-slate-300 leading-relaxed">
+                El Firewall de Aplicaciones Web (<strong class="text-sky-400">WAF</strong>) de Cloudflare protege tus propiedades digitales analizando cada petición HTTP en tiempo real mediante reglas gestionadas y reglas personalizadas definidas por el usuario.
+            </p>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="bg-[#0f172a] border border-[#1e3a5f] p-5 rounded-2xl space-y-2">
+                    <h4 class="font-bold text-white text-base">Reglas Gestionadas</h4>
+                    <p class="text-xs text-slate-300">Conjuntos de reglas predefinidos por expertos de Cloudflare para bloquear ataques OWASP Top 10 e inyecciones comunes.</p>
+                </div>
+                <div class="bg-[#0f172a] border border-[#1e3a5f] p-5 rounded-2xl space-y-2">
+                    <h4 class="font-bold text-white text-base">Reglas Personalizadas</h4>
+                    <p class="text-xs text-slate-300">Filtros personalizados basados en expresiones (país, IP, ruta, cabeceras) para bloquear o desafiar tráfico malicioso.</p>
+                </div>
+                <div class="bg-[#0f172a] border border-[#1e3a5f] p-5 rounded-2xl space-y-2">
+                    <h4 class="font-bold text-white text-base">Rate Limiting</h4>
+                    <p class="text-xs text-slate-300">Limita automáticamente el número de peticiones por segundo desde una misma IP para mitigar ataques de fuerza bruta.</p>
+                </div>
+            </div>
+
+            <div class="bg-[#0f172a] border border-[#1e3a5f] p-6 rounded-2xl space-y-4">
+                <h3 class="text-lg font-bold text-white">Práctica 7.1: Crear una Regla WAF de Bloqueo</h3>
+                <ol class="list-decimal list-inside space-y-2 text-sm text-slate-300">
+                    <li>Entra a tu panel de Cloudflare, selecciona tu dominio y ve a <strong>Security → WAF → Custom rules</strong>.</li>
+                    <li>Pulsa <strong>Create rule</strong> e introduce un nombre descriptivo (ej: <code class="text-sky-300">bloquear-prueba</code>).</li>
+                    <li>Define la condición: <em>URI Path equals <code class="text-sky-300">/prueba-bloqueo</code></em>.</li>
+                    <li>Acción: Selecciona <strong>Block</strong> y guarda los cambios para ver el desafío activo.</li>
+                </ol>
+            </div>
+
+            <div class="flex items-center justify-between pt-6 border-t border-[#1e3a5f]">
+                <button onclick="switchTab('publicacion')" class="px-5 py-3 bg-[#0f172a] hover:bg-[#1e3a5f] text-slate-300 border border-[#1e3a5f] rounded-xl font-medium transition flex items-center gap-2 min-h-[44px]">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg> Anterior
+                </button>
+                <button onclick="switchTab('rendimiento')" class="px-5 py-3 bg-[#1e3a5f] hover:bg-sky-600 text-white rounded-xl font-medium transition flex items-center gap-2 min-h-[44px]">
+                    Siguiente: Rendimiento y Caché <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                </button>
+            </div>
+        </section>
+
+        <!-- 7. PESTAÑA RENDIMIENTO Y CACHÉ -->
+        <section id="rendimiento" class="tab-content space-y-6" data-t="Rendimiento y Caché">
+            <h2 class="text-2xl sm:text-3xl font-bold text-white border-b border-[#1e3a5f] pb-3">Rendimiento, CDN y Estrategias de Caché</h2>
+            <p class="text-slate-300 leading-relaxed">
+                Cloudflare almacena contenido estático en centros de datos cercanos geográficamente a tus visitantes. Por defecto, Cloudflare cachea extensiones estáticas (imágenes, CSS, JS) y respeta las cabeceras <code class="text-sky-300">Cache-Control</code> del origen.
+            </p>
+
+            <div class="bg-[#0f172a] border border-[#1e3a5f] p-6 rounded-2xl space-y-4">
+                <h3 class="text-lg font-bold text-white">Comprobación de Estado de Caché (<code class="text-sky-300">cf-cache-status</code>)</h3>
+                <p class="text-sm text-slate-300">Puedes comprobar si una respuesta se sirvió desde la red perimetral analizando las cabeceras HTTP devueltas:</p>
+                <ul class="list-disc list-inside space-y-2 text-sm text-slate-300">
+                    <li><strong class="text-emerald-400">HIT:</strong> El archivo se sirvió directamente desde la caché de Cloudflare.</li>
+                    <li><strong class="text-amber-400">MISS:</strong> El archivo no estaba en caché y se solicitó al servidor de origen.</li>
+                    <li><strong class="text-sky-400">DYNAMIC:</strong> El contenido no es cacheable por defecto (como HTML dinámico).</li>
+                </ul>
+            </div>
+
+            <div class="flex items-center justify-between pt-6 border-t border-[#1e3a5f]">
+                <button onclick="switchTab('seguridad')" class="px-5 py-3 bg-[#0f172a] hover:bg-[#1e3a5f] text-slate-300 border border-[#1e3a5f] rounded-xl font-medium transition flex items-center gap-2 min-h-[44px]">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg> Anterior
+                </button>
+                <button onclick="switchTab('avanzado')" class="px-5 py-3 bg-[#1e3a5f] hover:bg-sky-600 text-white rounded-xl font-medium transition flex items-center gap-2 min-h-[44px]">
+                    Siguiente: API y Automatización <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                </button>
+            </div>
+        </section>
+
+        <!-- 8. PESTAÑA API Y AUTOMATIZACIÓN -->
+        <section id="avanzado" class="tab-content space-y-6" data-t="API y Automatización">
+            <h2 class="text-2xl sm:text-3xl font-bold text-white border-b border-[#1e3a5f] pb-3">Automatización y API de Cloudflare</h2>
+            <p class="text-slate-300 leading-relaxed">
+                Toda la gestión de Cloudflare se puede automatizar mediante su API REST utilizando tokens de acceso con permisos granulares de principio de menor privilegio, evitando el uso de claves globales de cuenta.
+            </p>
+
+            <div class="bg-[#0f172a] border border-[#1e3a5f] p-6 rounded-2xl space-y-4">
+                <h3 class="text-lg font-bold text-white">Verificar Token de API mediante Terminal</h3>
+                <div class="relative bg-slate-950 p-4 rounded-xl border border-[#1e3a5f]">
+                    <button onclick="copyCode(this)" class="absolute top-3 right-3 px-2.5 py-1 bg-[#1e3a5f] hover:bg-sky-600 text-xs rounded text-white transition">Copiar</button>
+                    <pre class="text-xs text-sky-300 overflow-x-auto"><code>curl "https://api.cloudflare.com/client/v4/user/tokens/verify" \
+  --header "Authorization: Bearer TU_TOKEN_API"</code></pre>
+                </div>
+            </div>
+
+            <div class="flex items-center justify-between pt-6 border-t border-[#1e3a5f]">
+                <button onclick="switchTab('rendimiento')" class="px-5 py-3 bg-[#0f172a] hover:bg-[#1e3a5f] text-slate-300 border border-[#1e3a5f] rounded-xl font-medium transition flex items-center gap-2 min-h-[44px]">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg> Anterior
+                </button>
+                <button onclick="switchTab('diagnostico')" class="px-5 py-3 bg-[#1e3a5f] hover:bg-sky-600 text-white rounded-xl font-medium transition flex items-center gap-2 min-h-[44px]">
+                    Siguiente: Diagnóstico Errores <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                </button>
+            </div>
+        </section>
+
+        <!-- 9. PESTAÑA DIAGNÓSTICO DE ERRORES -->
+        <section id="diagnostico" class="tab-content space-y-6" data-t="Diagnóstico de Errores">
+            <h2 class="text-2xl sm:text-3xl font-bold text-white border-b border-[#1e3a5f] pb-3">Diagnóstico y Resolución de Errores HTTP 5xx</h2>
+            <p class="text-slate-300 leading-relaxed">
+                Cuando una web detrás de Cloudflare experimenta fallos, los códigos de error HTTP de Cloudflare (520 a 526) indican exactamente dónde se rompió la comunicación entre la red perimetral y tu servidor de origen.
+            </p>
+
+            <div class="overflow-x-auto my-4 border border-[#1e3a5f] rounded-2xl bg-[#0f172a]">
+                <table class="w-full text-left border-collapse text-sm">
+                    <thead>
+                        <tr class="bg-[#1e3a5f]/40 border-b border-[#1e3a5f] text-sky-400">
+                            <th class="p-3">Código</th>
+                            <th class="p-3">Significado Técnico</th>
+                            <th class="p-3">Causa Habitual y Solución</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-[#1e3a5f] text-slate-300">
+                        <tr><td class="p-3 font-mono font-bold text-amber-400">520</td><td class="p-3">Respuesta vacía o inesperada del servidor.</td><td class="p-3 text-xs">El origen devolvió datos corrompidos o sin formato HTTP válido.</td></tr>
+                        <tr><td class="p-3 font-mono font-bold text-amber-400">521</td><td class="p-3">El servidor de origen rechaza la conexión.</td><td class="p-3 text-xs">El servidor web está apagado o bloquea las IPs de Cloudflare en su firewall.</td></tr>
+                        <tr><td class="p-3 font-mono font-bold text-amber-400">522</td><td class="p-3">Tiempo de espera agotado (Connection timed out).</td><td class="p-3 text-xs">El origen tarda demasiado en responder o está saturado de tráfico.</td></tr>
+                        <tr><td class="p-3 font-mono font-bold text-amber-400">524</td><td class="p-3">Tiempo de espera de aplicación agotado (~120s).</td><td class="p-3 text-xs">El script del servidor tardó más de dos minutos en procesar la petición.</td></tr>
+                        <tr><td class="p-3 font-mono font-bold text-amber-400">526</td><td class="p-3">Certificado SSL inválido en el origen.</td><td class="p-3 text-xs">El certificado SSL instalado en tu servidor ha caducado o no es válido.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="flex items-center justify-between pt-6 border-t border-[#1e3a5f]">
+                <button onclick="switchTab('avanzado')" class="px-5 py-3 bg-[#0f172a] hover:bg-[#1e3a5f] text-slate-300 border border-[#1e3a5f] rounded-xl font-medium transition flex items-center gap-2 min-h-[44px]">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg> Anterior
+                </button>
+                <button onclick="switchTab('preguntas')" class="px-5 py-3 bg-[#1e3a5f] hover:bg-sky-600 text-white rounded-xl font-medium transition flex items-center gap-2 min-h-[44px]">
+                    Siguiente: 33 Preguntas (Q&A) <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                </button>
+            </div>
+        </section>
+
+        <!-- 10. PESTAÑA 33 PREGUNTAS Y RESPUESTAS (Q&A) -->
+        <section id="preguntas" class="tab-content space-y-6" data-t="33 Preguntas (Q&A)">
+            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-[#1e3a5f] pb-4">
+                <div>
+                    <h2 class="text-2xl sm:text-3xl font-bold text-white">33 Preguntas y Respuestas (Q&A)</h2>
+                    <p class="text-slate-400 text-sm mt-1">Organizadas rigurosamente por nivel de dificultad técnica.</p>
+                </div>
+                <!-- Botones de control global de despliegue -->
+                <div class="flex items-center gap-3">
+                    <button onclick="toggleAllQA(true)" class="px-4 py-2 bg-sky-500/20 hover:bg-sky-500/30 border border-sky-500/40 text-sky-300 text-xs font-semibold rounded-xl transition min-h-[40px]">
+                        + Desplegar todas respuestas
+                    </button>
+                    <button onclick="toggleAllQA(false)" class="px-4 py-2 bg-[#0f172a] hover:bg-[#1e3a5f] border border-[#1e3a5f] text-slate-300 text-xs font-semibold rounded-xl transition min-h-[40px]">
+                        - Plegar todas las respuestas
+                    </button>
+                </div>
+            </div>
+
+            <!-- Contenedor de Preguntas agrupadas por Nivel -->
+            <div class="space-y-8" id="qa-container">
+                
+                <!-- NIVEL 1: PRINCIPIANTE (1 a 11) -->
+                <div class="space-y-4">
+                    <h3 class="text-xl font-bold text-sky-400 flex items-center gap-2">
+                        <span class="w-3 h-3 rounded-full bg-sky-400"></span> Nivel 1: Principiante (Preguntas 1 a 11)
+                    </h3>
+                    <div class="space-y-3" id="level-1-qa">
+                        <!-- JS generará las 33 preguntas de forma limpia, robusta y mantenible -->
+                    </div>
+                </div>
+
+                <!-- NIVEL 2: INTERMEDIO (12 a 22) -->
+                <div class="space-y-4">
+                    <h3 class="text-xl font-bold text-indigo-400 flex items-center gap-2">
+                        <span class="w-3 h-3 rounded-full bg-indigo-400"></span> Nivel 2: Intermedio (Preguntas 12 a 22)
+                    </h3>
+                    <div class="space-y-3" id="level-2-qa"></div>
+                </div>
+
+                <!-- NIVEL 3: AVANZADO (23 a 33) -->
+                <div class="space-y-4">
+                    <h3 class="text-xl font-bold text-emerald-400 flex items-center gap-2">
+                        <span class="w-3 h-3 rounded-full bg-emerald-400"></span> Nivel 3: Avanzado (Preguntas 23 a 33)
+                    </h3>
+                    <div class="space-y-3" id="level-3-qa"></div>
+                </div>
+
+            </div>
+
+            <div class="flex items-center justify-between pt-6 border-t border-[#1e3a5f]">
+                <button onclick="switchTab('diagnostico')" class="px-5 py-3 bg-[#0f172a] hover:bg-[#1e3a5f] text-slate-300 border border-[#1e3a5f] rounded-xl font-medium transition flex items-center gap-2 min-h-[44px]">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg> Anterior
+                </button>
+                <button onclick="switchTab('errores')" class="px-5 py-3 bg-[#1e3a5f] hover:bg-sky-600 text-white rounded-xl font-medium transition flex items-center gap-2 min-h-[44px]">
+                    Siguiente: Errores Frecuentes <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                </button>
+            </div>
+        </section>
+
+        <!-- 11. PESTAÑA ERRORES FRECUENTES -->
+        <section id="errores" class="tab-content space-y-6" data-t="Errores Frecuentes">
+            <h2 class="text-2xl sm:text-3xl font-bold text-white border-b border-[#1e3a5f] pb-3">Errores Frecuentes y Trampas Clásicas</h2>
+            <p class="text-slate-300 leading-relaxed">
+                Evita los tropiezos más comunes al configurar dominios, nameservers, registros y despliegues con Cloudflare.
+            </p>
+
+            <div class="space-y-4">
+                <div class="bg-[#0f172a] border border-[#1e3a5f] p-5 rounded-2xl space-y-2">
+                    <h3 class="font-bold text-amber-400 text-base">1. Cambiar los Nameservers sin comprobar los registros de correo (MX/TXT)</h3>
+                    <p class="text-sm text-slate-300">Si activas Cloudflare olvidando copiar los registros MX o SPF/DKIM de tu anterior proveedor, el correo electrónico del dominio dejará de recibirse inmediatamente.</p>
+                </div>
+                <div class="bg-[#0f172a] border border-[#1e3a5f] p-5 rounded-2xl space-y-2">
+                    <h3 class="font-bold text-amber-400 text-base">2. Activar Proxy (Nube Naranja) en registros que no son HTTP</h3>
+                    <p class="text-sm text-slate-300">Los registros de correo y subdominios FTP o SSH no deben pasar por el proxy web de Cloudflare; deben permanecer en nube gris (DNS only).</p>
+                </div>
+                <div class="bg-[#0f172a] border border-[#1e3a5f] p-5 rounded-2xl space-y-2">
+                    <h3 class="font-bold text-amber-400 text-base">3. Olvidar desactivar DNSSEC en el registrador antes del cambio</h3>
+                    <p class="text-sm text-slate-300">Si tu registrador anterior tenía DNSSEC activo, cambiar los nameservers sin desactivarlo previamente provocará que el dominio sea inaccesible globalmente.</p>
+                </div>
+            </div>
+
+            <div class="flex items-center justify-between pt-6 border-t border-[#1e3a5f]">
+                <button onclick="switchTab('preguntas')" class="px-5 py-3 bg-[#0f172a] hover:bg-[#1e3a5f] text-slate-300 border border-[#1e3a5f] rounded-xl font-medium transition flex items-center gap-2 min-h-[44px]">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg> Anterior
+                </button>
+                <button onclick="switchTab('prompts')" class="px-5 py-3 bg-[#1e3a5f] hover:bg-sky-600 text-white rounded-xl font-medium transition flex items-center gap-2 min-h-[44px]">
+                    Siguiente: Prompts Maestros <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                </button>
+            </div>
+        </section>
+
+        <!-- 12. PESTAÑA PROMPTS (TODOS LOS PROMPTS REPETIDOS Y DESCRIPCIÓN) -->
+        <section id="prompts" class="tab-content space-y-6" data-t="Prompts Maestros">
+            <h2 class="text-2xl sm:text-3xl font-bold text-white border-b border-[#1e3a5f] pb-3">Prompts Maestros y Herramientas de IA</h2>
+            <p class="text-slate-300 leading-relaxed">
+                A continuación se recogen y repiten íntegramente todos los prompts empleados en la elaboración y soporte técnico de este tutorial, junto con una breve descripción de dónde y cómo se emplean.
+            </p>
+
+            <div class="space-y-6">
+                <!-- Prompt 1 -->
+                <div class="bg-[#0f172a] border border-[#1e3a5f] p-6 rounded-2xl space-y-3">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-base font-bold text-sky-400">1. Prompt Maestro Gauntlet para Creación de Tutoriales HTML</h3>
+                        <span class="text-xs bg-sky-500/10 text-sky-300 px-2.5 py-1 rounded-full border border-sky-500/20">Uso: Estructura y Auditoría</span>
+                    </div>
+                    <p class="text-xs text-slate-300 leading-relaxed">
+                        <strong>Dónde se emplea:</strong> En la fase inicial de diseño del documento y validación adversarial de contenidos para transformar la documentación bruta en un tutorial interactivo de agencia sin errores.
+                    </p>
+                    <div class="relative bg-slate-950 p-4 rounded-xl border border-[#1e3a5f]">
+                        <button onclick="copyCode(this)" class="absolute top-3 right-3 px-2.5 py-1 bg-[#1e3a5f] hover:bg-sky-600 text-xs rounded text-white transition">Copiar</button>
+                        <pre class="text-xs text-sky-300 overflow-x-auto whitespace-pre-wrap"><code>[PROMPT MAESTRO V3 — GAUNTLET]
+Transforma el material adjunto en un tutorial HTML interactivo, completo y funcional en un único archivo autónomo. Aplica roles de Constructor y Árbitro Adversarial para auditar rigurosamente exactitud, pedagogía, funcionamiento técnico y experiencia móvil.</code></pre>
+                    </div>
+                </div>
+
+                <!-- Prompt 2 -->
+                <div class="bg-[#0f172a] border border-[#1e3a5f] p-6 rounded-2xl space-y-3">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-base font-bold text-sky-400">2. Prompt para SVG Hero y Animación de Red Perimetral</h3>
+                        <span class="text-xs bg-indigo-500/10 text-indigo-300 px-2.5 py-1 rounded-full border border-indigo-500/20">Uso: Impacto Visual</span>
+                    </div>
+                    <p class="text-xs text-slate-300 leading-relaxed">
+                        <strong>Dónde se emplea:</strong> Para generar la ilustración vectorial animada presente en la pestaña INICIO y CRÉDITOS, representando nodos globales, tráfico Anycast y seguridad perimetral.
+                    </p>
+                    <div class="relative bg-slate-950 p-4 rounded-xl border border-[#1e3a5f]">
+                        <button onclick="copyCode(this)" class="absolute top-3 right-3 px-2.5 py-1 bg-[#1e3a5f] hover:bg-sky-600 text-xs rounded text-white transition">Copiar</button>
+                        <pre class="text-xs text-sky-300 overflow-x-auto whitespace-pre-wrap"><code>[SVG HERO Y CRÉDITOS - IMPACTO VISUAL Y ANIMACIÓN]
+Crea un SVG HERO espectacular, visualmente impactante y muy animado relacionado con el tema central de redes y Cloudflare. Combina múltiples animaciones simultáneas, profundidad visual, capas y estética tecnológica cinematográfica.</code></pre>
+                    </div>
+                </div>
+
+                <!-- Prompt 3 -->
+                <div class="bg-[#0f172a] border border-[#1e3a5f] p-6 rounded-2xl space-y-3">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-base font-bold text-sky-400">3. Prompt Skill Clean Code</h3>
+                        <span class="text-xs bg-emerald-500/10 text-emerald-300 px-2.5 py-1 rounded-full border border-emerald-500/20">Uso: Calidad de Código</span>
+                    </div>
+                    <p class="text-xs text-slate-300 leading-relaxed">
+                        <strong>Dónde se emplea:</strong> Para estructurar el código JavaScript y CSS del tutorial aplicando los principios de Robert C. Martin (Uncle Bob), nombres reveladores de intención, funciones reducidas y manejo robusto de excepciones.
+                    </p>
+                    <div class="relative bg-slate-950 p-4 rounded-xl border border-[#1e3a5f]">
+                        <button onclick="copyCode(this)" class="absolute top-3 right-3 px-2.5 py-1 bg-[#1e3a5f] hover:bg-sky-600 text-xs rounded text-white transition">Copiar</button>
+                        <pre class="text-xs text-sky-300 overflow-x-auto whitespace-pre-wrap"><code>[SKILL - CLEAN CODE]
+Aplica la Regla del Boy Scout, nombres con sentido, funciones reducidas (< 20 líneas), separación estricta de consultas y comandos, manejo de excepciones sin nulls, y el checklist de ejecución rigurosa antes de entregar código.</code></pre>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex items-center justify-between pt-6 border-t border-[#1e3a5f]">
+                <button onclick="switchTab('errores')" class="px-5 py-3 bg-[#0f172a] hover:bg-[#1e3a5f] text-slate-300 border border-[#1e3a5f] rounded-xl font-medium transition flex items-center gap-2 min-h-[44px]">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg> Anterior
+                </button>
+                <button onclick="switchTab('glosario')" class="px-5 py-3 bg-[#1e3a5f] hover:bg-sky-600 text-white rounded-xl font-medium transition flex items-center gap-2 min-h-[44px]">
+                    Siguiente: Glosario y Fuentes <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                </button>
+            </div>
+        </section>
+
+        <!-- 13. PESTAÑA GLOSARIO Y FUENTES -->
+        <section id="glosario" class="tab-content space-y-6" data-t="Glosario y Fuentes">
+            <h2 class="text-2xl sm:text-3xl font-bold text-white border-b border-[#1e3a5f] pb-3">Glosario de Términos y Fuentes Oficiales</h2>
+            <p class="text-slate-300 leading-relaxed">
+                Definición clara de todos los conceptos técnicos empleados y referencias a la documentación oficial consultada.
+            </p>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="bg-[#0f172a] border border-[#1e3a5f] p-5 rounded-2xl space-y-3">
+                    <h3 class="font-bold text-sky-400 text-base">Glosario Esencial</h3>
+                    <ul class="space-y-2 text-xs text-slate-300">
+                        <li><strong>Anycast:</strong> Técnica de encaminamiento donde múltiples servidores comparten una misma dirección IP.</li>
+                        <li><strong>CDN:</strong> Red de distribución de contenido optimizada geográficamente.</li>
+                        <li><strong>DNS:</strong> Sistema de nombres que traduce dominios a IPs.</li>
+                        <li><strong>Proxy Inverso:</strong> Intermediario situado frente a los servidores de origen.</li>
+                    </ul>
+                </div>
+                <div class="bg-[#0f172a] border border-[#1e3a5f] p-5 rounded-2xl space-y-3">
+                    <h3 class="font-bold text-sky-400 text-base">Fuentes de Documentación Oficial</h3>
+                    <ul class="space-y-2 text-xs text-slate-300">
+                        <li><a href="https://developers.cloudflare.com/" target="_blank" class="text-sky-300 hover:underline">Cloudflare Developers Docs</a> <button onclick="openExternalUrl('https://developers.cloudflare.com/')" class="ml-2 px-2 py-0.5 bg-[#1e3a5f] text-[10px] rounded text-white">Abrir enlace en nueva ventana</button></li>
+                        <li><a href="https://developers.cloudflare.com/workers/" target="_blank" class="text-sky-300 hover:underline">Cloudflare Workers Guide</a> <button onclick="openExternalUrl('https://developers.cloudflare.com/workers/')" class="ml-2 px-2 py-0.5 bg-[#1e3a5f] text-[10px] rounded text-white">Abrir enlace en nueva ventana</button></li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="flex items-center justify-between pt-6 border-t border-[#1e3a5f]">
+                <button onclick="switchTab('prompts')" class="px-5 py-3 bg-[#0f172a] hover:bg-[#1e3a5f] text-slate-300 border border-[#1e3a5f] rounded-xl font-medium transition flex items-center gap-2 min-h-[44px]">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg> Anterior
+                </button>
+                <button onclick="switchTab('creditos')" class="px-5 py-3 bg-[#1e3a5f] hover:bg-sky-600 text-white rounded-xl font-medium transition flex items-center gap-2 min-h-[44px]">
+                    Siguiente: Créditos <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                </button>
+            </div>
+        </section>
+
+        <!-- 14. PESTAÑA CRÉDITOS -->
+        <section id="creditos" class="tab-content space-y-6" data-t="Créditos e Información">
+            <h2 class="text-2xl sm:text-3xl font-bold text-white border-b border-[#1e3a5f] pb-3">Créditos del Tutorial</h2>
+            
+            <!-- SVG HERO COMPARTIDO TAMBIÉN EN CRÉDITOS -->
+            <div class="my-6 p-4 bg-[#0f172a] border border-[#1e3a5f] rounded-2xl flex flex-col items-center justify-center shadow-inner">
+                <div id="creditos-svg-container" class="w-full max-w-md h-64 flex items-center justify-center" aria-label="Ilustración animada compartida de Cloudflare">
+                    <!-- El SVG se inyectará dinámicamente -->
+                </div>
+                <p class="text-xs text-slate-400 mt-2 text-center">Representación visual interactiva de la arquitectura de red y seguridad perimetral.</p>
+            </div>
+
+            <div class="bg-[#0f172a] border border-[#1e3a5f] p-8 rounded-3xl text-center space-y-4 shadow-xl">
+                <h3 class="text-4xl font-black bg-gradient-to-r from-sky-400 to-indigo-400 bg-clip-text text-transparent">Rubén Sbarsky</h3>
+                <p class="text-lg font-semibold text-sky-300">Autor del tutorial</p>
+                <div class="pt-4 border-t border-[#1e3a5f] max-w-md mx-auto space-y-2 text-sm text-slate-300">
+                    <p><strong>Fecha de creación:</strong> 15/11/2026</p>
+                    <p><strong>Hora de sincronización:</strong> 15:50:14</p>
+                    <p><strong>Versión del documento:</strong> v001.0</p>
+                    <p><strong>Estándar de calidad:</strong> Agencia Premium / Clean Code</p>
+                </div>
+            </div>
+
+            <div class="flex items-center justify-between pt-6 border-t border-[#1e3a5f]">
+                <button onclick="switchTab('glosario')" class="px-5 py-3 bg-[#0f172a] hover:bg-[#1e3a5f] text-slate-300 border border-[#1e3a5f] rounded-xl font-medium transition flex items-center gap-2 min-h-[44px]">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg> Anterior
+                </button>
+                <button onclick="switchTab('inicio')" class="px-5 py-3 bg-[#1e3a5f] hover:bg-sky-600 text-white rounded-xl font-medium transition flex items-center gap-2 min-h-[44px]">
+                    Volver al Inicio <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"></path></svg>
+                </button>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- BOTONES FLOTANTES MÓVIL Y ESCRITORIO -->
+    <!-- 1. Botón flotante para mover a INICIO -->
+    <button id="float-home-btn" aria-label="Ir al inicio" class="fixed bottom-6 left-6 z-40 bg-sky-500 hover:bg-sky-400 text-slate-950 p-3.5 rounded-full shadow-2xl transition flex items-center justify-center cursor-move min-h-[48px] min-w-[48px] border-2 border-white/20">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+    </button>
+
+    <!-- 2. Botón flotante ARRIBA para volver al comienzo de la pestaña actual -->
+    <button id="float-top-btn" aria-label="Ir arriba en esta pestaña" class="fixed bottom-6 right-6 z-40 bg-[#1e3a5f] hover:bg-sky-600 text-white p-3.5 rounded-full shadow-2xl transition flex items-center justify-center cursor-move min-h-[48px] min-w-[48px] border-2 border-white/20">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path></svg>
+    </button>
+
+    <!-- PLANTILLA OCÚLTA ÚNICA PARA EL SVG HERO ANIMADO -->
+    <div id="svg-template-source" class="hidden">
+        <svg viewBox="0 0 800 500" class="w-full h-full drop-shadow-lg" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+                <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#0f172a" />
+                    <stop offset="100%" stop-color="#0a0e1a" />
+                </linearGradient>
+                <linearGradient id="pulseGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.2" />
+                    <stop offset="50%" stop-color="#38bdf8" stop-opacity="1" />
+                    <stop offset="100%" stop-color="#818cf8" stop-opacity="0.2" />
+                </linearGradient>
+                <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+                    <feGaussianBlur stdDeviation="6" result="blur" />
+                    <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                </filter>
+            </defs>
+            
+            <!-- Fondo de la ilustración -->
+            <rect width="800" height="500" rx="20" fill="url(#bgGrad)" stroke="#1e3a5f" stroke-width="2"/>
+
+            <!-- Órbitas y redes de la CDN global -->
+            <ellipse cx="400" cy="250" rx="320" ry="120" fill="none" stroke="#1e3a5f" stroke-width="1.5" stroke-dasharray="6 6" transform="rotate(-15 400 250)">
+                <animateTransform attributeName="transform" type="rotate" from="-15 400 250" to="345 400 250" dur="40s" repeatCount="indefinite"/>
+            </ellipse>
+            <ellipse cx="400" cy="250" rx="260" ry="90" fill="none" stroke="#38bdf8" stroke-width="1" stroke-opacity="0.4" transform="rotate(25 400 250)">
+                <animateTransform attributeName="transform" type="rotate" from="25 400 250" to="385 400 250" dur="25s" repeatCount="indefinite"/>
+            </ellipse>
+
+            <!-- Líneas de conexión de datos -->
+            <g stroke="#38bdf8" stroke-opacity="0.6" stroke-width="2">
+                <line x1="150" y1="350" x2="350" y2="250"><animate attributeName="stroke-dasharray" values="0,200;200,0" dur="3s" repeatCount="indefinite"/></line>
+                <line x1="650" y1="350" x2="450" y2="250"><animate attributeName="stroke-dasharray" values="0,200;200,0" dur="2.5s" repeatCount="indefinite"/></line>
+                <line x1="400" y1="100" x2="400" y2="220"><animate attributeName="stroke-dasharray" values="0,150;150,0" dur="2s" repeatCount="indefinite"/></line>
+            </g>
+
+            <!-- Nodos perimetrales animados (Edge Datacenters) -->
+            <g filter="url(#glow)">
+                <!-- Nodo Central Cloudflare -->
+                <circle cx="400" cy="250" r="45" fill="#1e3a5f" stroke="#38bdf8" stroke-width="3">
+                    <animate attributeName="r" values="42;48;42" dur="3s" repeatCount="indefinite"/>
+                </circle>
+                <circle cx="400" cy="250" r="20" fill="#38bdf8">
+                    <animate attributeName="opacity" values="0.6;1;0.6" dur="2s" repeatCount="indefinite"/>
+                </circle>
+
+                <!-- Nodo Visitante (Cliente) -->
+                <circle cx="150" cy="350" r="25" fill="#0f172a" stroke="#818cf8" stroke-width="2"/>
+                <circle cx="150" cy="350" r="8" fill="#818cf8"/>
+
+                <!-- Nodo Servidor Origen -->
+                <circle cx="650" cy="350" r="25" fill="#0f172a" stroke="#10b981" stroke-width="2"/>
+                <circle cx="650" cy="350" r="8" fill="#10b981"/>
+
+                <!-- Nodo Workers / Edge Compute -->
+                <circle cx="400" cy="100" r="22" fill="#0f172a" stroke="#f59e0b" stroke-width="2"/>
+                <circle cx="400" cy="100" r="7" fill="#f59e0b"/>
+            </g>
+
+            <!-- Partículas de datos viajando -->
+            <circle r="5" fill="#38bdf8">
+                <animateMotion path="M 150,350 L 400,250 L 650,350" dur="4s" repeatCount="indefinite"/>
+            </circle>
+            <circle r="4" fill="#10b981">
+                <animateMotion path="M 650,350 L 400,250 L 150,350" dur="3.5s" repeatCount="indefinite"/>
+            </circle>
+
+            <!-- Textos explicativos flotantes en el SVG -->
+            <text x="400" y="315" fill="#e2e8f0" font-size="14" font-family="Inter, sans-serif" font-weight="bold" text-anchor="middle">Red Perimetral Cloudflare</text>
+            <text x="150" y="395" fill="#94a3b8" font-size="12" font-family="Inter, sans-serif" text-anchor="middle">Cliente / Móvil</text>
+            <text x="650" y="395" fill="#94a3b8" font-size="12" font-family="Inter, sans-serif" text-anchor="middle">Servidor Origen</text>
+            <text x="400" y="70" fill="#94a3b8" font-size="12" font-family="Inter, sans-serif" text-anchor="middle">Cloudflare Workers</text>
+        </svg>
+    </div>
+
+    <!-- SCRIPT PRINCIPAL DE CONTROL (CLEAN CODE & SPATIAL ROUTING) -->
+    <script>
+        /* 1. DATOS DE LAS 33 PREGUNTAS Y RESPUESTAS (Q&A) */
+        const qaData = {
+            level1: [
+                { q: "Escribo ejemplo.com en el navegador. ¿Qué ocurre primero?", a: "El navegador consulta al sistema DNS para traducir el nombre a una dirección IP numérica antes de intentar establecer cualquier conexión." },
+                { q: "¿Qué diferencia hay entre un dominio y un servidor?", a: "El dominio es el nombre legible que se alquila; el servidor es el ordenador físico o virtual que aloja los archivos y responde a las peticiones." },
+                { q: "¿Qué es DNS y por qué es tan importante?", a: "Es el sistema global de traducción de nombres a IPs. Si falla, las webs resultan inaccesibles mediante nombres." },
+                { q: "¿Qué es Cloudflare exactamente?", a: "Una red global perimetral que ofrece DNS, proxy inverso, protección contra ataques y ejecución de código en el borde (edge)." },
+                { q: "¿Qué significa que una web esté 'detrás de Cloudflare'?", a: "Que el tráfico web pasa por su proxy inverso antes de alcanzar el servidor de origen, activando caché y seguridad." },
+                { q: "¿Qué diferencia hay entre nube naranja y nube gris?", a: "La nube naranja (Proxied) enruta el tráfico web a través de Cloudflare; la gris (DNS Only) apunta directamente al servidor real." },
+                { q: "¿Qué es HTTPS y qué papel juega el certificado?", a: "HTTPS es HTTP cifrado mediante TLS. El certificado valida criptográficamente la identidad legítima del servidor." },
+                { q: "¿Puedo usar Cloudflare si mi web está en GitHub Pages?", a: "Sí, asociando un dominio propio gestionado en Cloudflare que apunte mediante registros A y CNAME a GitHub Pages." },
+                { q: "¿Puedo usar Cloudflare sin tener una web?", a: "Sí, para gestionar DNS avanzado, reenvío de correo (Email Routing) o ejecutar workers backend." },
+                { q: "¿Qué es gratis en Cloudflare y qué puede costar?", a: "Son gratuitos el DNS, la capa básica de WAF, el cifrado y las peticiones estáticas en Workers. Se pagan dominios y consumo avanzado." },
+                { q: "¿Qué debo aprender primero en redes?", a: "Los conceptos fundamentales de cliente/servidor, direcciones IP, resolución DNS y el funcionamiento básico de HTTP." }
+            ],
+            level2: [
+                { q: "¿Qué diferencia hay entre nameservers y registros DNS?", a: "Los nameservers determinan quién gestiona toda la zona DNS; los registros son los datos individuales dentro de dicha zona." },
+                { q: "Cambio un registro DNS y un amigo lo ve y yo no. ¿Por qué?", a: "Por las cachés de los resolutores intermedios (TTL pendiente de caducar en tu proveedor local)." },
+                { q: "¿Qué es un proxy inverso y en qué se diferencia de uno normal?", a: "El proxy inverso protege y asiste al servidor de origen recibiendo las peticiones en su nombre." },
+                { q: "¿Por qué mi web no se cachea por defecto?", a: "Porque Cloudflare no cachea páginas HTML dinámicas ni respuestas con cookies de forma predeterminada sin reglas específicas." },
+                { q: "Mi web con Cloudflare da un bucle de redirecciones. ¿Qué reviso?", a: "El modo de cifrado SSL/TLS (evitar Flexible si el origen redirige a HTTPS) y reglas conflictivas." },
+                { q: "¿Qué modo SSL/TLS debo elegir obligatoriamente?", a: "Full (Strict), siempre que tu servidor de origen disponga de un certificado SSL válido y verificado." },
+                { q: "¿Por qué los registros de correo deben estar en nube gris?", a: "Porque el tráfico SMTP/IMAP no pasa por el proxy web HTTP de Cloudflare y requiere acceso directo." },
+                { q: "¿Cuándo usaría una regla de límite de peticiones (Rate Limiting)?", a: "Para proteger formularios de acceso o pasarelas de pago frente a ataques de fuerza bruta." },
+                { q: "¿Qué diferencia hay entre reglas WAF gestionadas y personalizadas?", a: "Las gestionadas son parches automáticos de Cloudflare contra vulnerabilidades comunes; las personalizadas las defines tú." },
+                { q: "¿Cómo verifico si una mejora de rendimiento es real?", a: "Realizando múltiples mediciones de latencia (ej. con curl) antes y después de aplicar un único cambio." },
+                { q: "¿Qué diferencia hay entre wrangler dev y wrangler deploy?", a: "wrangler dev ejecuta un entorno local de pruebas en tu equipo; deploy sube el código a producción global." }
+            ],
+            level3: [
+                { q: "Tengo un error 521. ¿Cómo lo diagnostico?", a: "Indica que el servidor de origen rechaza la conexión. Verifica si el servidor está caído o si bloquea las IPs de Cloudflare en su firewall." },
+                { q: "¿Qué diferencia hay entre los errores 522, 523 y 524?", a: "522 es timeout de conexión; 523 es origen inalcanzable; 524 es timeout de aplicación (el servidor tardó más de 120s en responder)." },
+                { q: "Un proceso tarda 5 minutos y da error 524. ¿Qué hago?", a: "Rediseñar el proceso para que se ejecute en segundo plano mediante colas (Queues) o delegarlo a un subdominio sin proxy." },
+                { q: "¿Qué riesgos conlleva activar HSTS?", a: "Obliga a usar HTTPS; si tu certificado falla posteriormente, los navegadores bloquearán el acceso de forma persistente." },
+                { q: "¿Puedo bloquear tráfico por país en el plan gratuito?", a: "Las reglas IP Access de bloqueo por país requieren planes Enterprise, aunque pueden filtrarse con reglas personalizadas avanzadas." },
+                { q: "¿Qué diferencia hay entre cuota incluida y límite técnico en Workers?", a: "La cuota es lo incluido en tu plan; superar límites técnicos genera errores de ejecución o cargos adicionales en planes de pago." },
+                { q: "¿Por qué un token de API con privilegios mínimos es superior a la clave global?", a: "Porque limita el radio de acción en caso de filtración y permite revocar permisos específicos sin comprometer la cuenta." },
+                { q: "¿Cloudflare Pages o Workers para un sitio estático?", a: "Cloudflare impulsa actualmente Workers por su flexibilidad superior y rendimiento perimetral unificado." },
+                { q: "¿Cómo protejo páginas con áreas privadas de usuarios en la caché?", a: "Excluyendo rutas con cabeceras de sesión o cookies privadas y aplicando reglas de exclusión de caché." },
+                { q: "¿Cómo aseguro una migración DNS sin cortes?", a: "Realizando copias de seguridad de registros, bajando el TTL previamente, y manteniendo los servidores antiguos hasta verificar propagación." },
+                { q: "¿Qué hago si una regla de seguridad bloquea usuarios legítimos?", a: "Desactivar temporalmente la regla, analizar los registros de eventos de seguridad (Security Events) y refinar la expresión." }
+            ]
+        };
+
+        /* 2. RENDERIZAR DINÁMICAMENTE LAS 33 PREGUNTAS */
+        function renderQA() {
+            ['level1', 'level2', 'level3'].forEach(lvl => {
+                const container = document.getElementById(`${lvl}-qa`);
+                if(!container) return;
+                container.innerHTML = qaData[lvl].map((item, idx) => {
+                    const globalIdx = lvl === 'level1' ? idx + 1 : lvl === 'level2' ? idx + 12 : idx + 23;
+                    return `
+                        <div class="bg-[#0f172a] border border-[#1e3a5f] rounded-2xl overflow-hidden transition qa-item">
+                            <button onclick="toggleQA(this)" class="w-full text-left p-4 sm:p-5 flex items-center justify-between gap-4 hover:bg-[#1e3a5f]/30 transition min-h-[48px]" aria-expanded="false">
+                                <span class="font-semibold text-white text-sm sm:text-base"><strong class="text-sky-400 mr-2">Q${globalIdx}.</strong> ${item.q}</span>
+                                <svg class="w-5 h-5 text-sky-400 shrink-0 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                            </button>
+                            <div class="qa-answer hidden px-5 pb-5 pt-1 text-slate-300 text-sm leading-relaxed border-t border-[#1e3a5f]/50 bg-[#0a0e1a]/40">
+                                ${item.a}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            });
+        }
+
+        function toggleQA(btn) {
+            const answer = btn.nextElementSibling;
+            const icon = btn.querySelector('svg');
+            const isExpanded = btn.getAttribute('aria-expanded') === 'true';
+            btn.setAttribute('aria-expanded', !isExpanded);
+            answer.classList.toggle('hidden');
+            icon.classList.toggle('rotate-180');
+        }
+
+        function toggleAllQA(open) {
+            document.querySelectorAll('.qa-item').forEach(item => {
+                const btn = item.querySelector('button');
+                const answer = item.querySelector('.qa-answer');
+                const icon = btn.querySelector('svg');
+                btn.setAttribute('aria-expanded', open);
+                if(open) {
+                    answer.classList.remove('hidden');
+                    icon.classList.add('rotate-180');
+                } else {
+                    answer.classList.add('hidden');
+                    icon.classList.remove('rotate-180');
+                }
+            });
+        }
+
+        /* 3. SISTEMA DE PESTAÑAS (SPA ROUTING) */
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(sec => sec.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('bg-sky-500', 'text-slate-950', 'shadow-md');
+                btn.classList.add('bg-[#0f172a]', 'text-slate-300', 'hover:bg-[#1e3a5f]', 'border', 'border-[#1e3a5f]');
+            });
+
+            const targetSec = document.getElementById(tabId);
+            const targetBtn = document.querySelector(`[data-tab="${tabId}"]`);
+
+            if(targetSec) targetSec.classList.add('active');
+            if(targetBtn) {
+                targetBtn.classList.remove('bg-[#0f172a]', 'text-slate-300', 'hover:bg-[#1e3a5f]', 'border', 'border-[#1e3a5f]');
+                targetBtn.classList.add('bg-sky-500', 'text-slate-950', 'shadow-md');
+            }
+
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            
+            // Actualizar resaltado en el cajón de índice si está abierto
+            updateDrawerActiveState(tabId);
+        }
+
+        /* 4. MENÚ SÁNDWICH / ÍNDICE LATERAL */
+        const drawer = document.getElementById('dr');
+        const menuBtn = document.getElementById('mb');
+
+        function toggleDrawer(forceState) {
+            const isOpen = forceState !== undefined ? forceState : drawer.classList.contains('-translate-x-full');
+            if (isOpen) {
+                drawer.classList.remove('-translate-x-full');
+                drawer.classList.add('translate-x-0');
+            } else {
+                drawer.classList.remove('translate-x-0');
+                drawer.classList.add('-translate-x-full');
+            }
+            menuBtn.setAttribute('aria-expanded', isOpen);
+        }
+
+        function buildDrawerLinks() {
+            const linksContainer = document.getElementById('drawer-links');
+            const sections = document.querySelectorAll('.tab-content');
+            linksContainer.innerHTML = '';
+
+            sections.forEach((sec, idx) => {
+                const tabId = sec.id;
+                const title = sec.dataset.t || sec.querySelector('h2')?.textContent || `Sección ${idx+1}`;
+                const a = document.createElement('a');
+                a.textContent = (idx ? idx + '. ' : '') + title;
+                a.className = 'block p-3 rounded-xl text-slate-200 hover:bg-[#1e3a5f]/50 cursor-pointer min-h-[44px] flex items-center text-sm transition';
+                a.onclick = () => {
+                    switchTab(tabId);
+                    toggleDrawer(false);
+                };
+                linksContainer.appendChild(a);
+            });
+        }
+
+        function updateDrawerActiveState(tabId) {
+            const links = document.querySelectorAll('#drawer-links a');
+            const sections = document.querySelectorAll('.tab-content');
+            sections.forEach((sec, idx) => {
+                if(sec.id === tabId && links[idx]) {
+                    links[idx].classList.add('bg-[#00d4ff22]', 'text-sky-400', 'font-semibold');
+                } else if(links[idx]) {
+                    links[idx].classList.remove('bg-[#00d4ff22]', 'text-sky-400', 'font-semibold');
+                }
+            });
+        }
+
+        /* 5. INYECCIÓN DEL SVG HERO COMPARTIDO EN INICIO Y CRÉDITOS */
+        function initSharedSvg() {
+            const templateHtml = document.getElementById('svg-template-source').innerHTML;
+            const heroContainer = document.getElementById('hero-svg-container');
+            const creditosContainer = document.getElementById('creditos-svg-container');
+
+            if(heroContainer) heroContainer.innerHTML = templateHtml;
+            if(creditosContainer) creditosContainer.innerHTML = templateHtml;
+        }
+
+        /* 6. BOTONES FLOTANTES ARRASTRABLES (INICIO Y ARRIBA) */
+        function makeDraggable(el) {
+            let isDragging = false;
+            let startX, startY, initialX, initialY;
+
+            el.addEventListener('mousedown', dragStart);
+            el.addEventListener('touchstart', dragStart, {passive: true});
+
+            function dragStart(e) {
+                isDragging = true;
+                startX = e.clientX || e.touches[0].clientX;
+                startY = e.clientY || e.touches[0].clientY;
+                initialX = el.offsetLeft;
+                initialY = el.offsetTop;
+
+                document.addEventListener('mousemove', drag);
+                document.addEventListener('touchmove', drag, {passive: false});
+                document.addEventListener('mouseup', dragEnd);
+                document.addEventListener('touchend', dragEnd);
+            }
+
+            function drag(e) {
+                if (!isDragging) return;
+                const currentX = e.clientX || e.touches[0].clientX;
+                const currentY = e.clientY || e.touches[0].clientY;
+                const dx = currentX - startX;
+                const dy = currentY - startY;
+
+                el.style.right = 'auto';
+                el.style.bottom = 'auto';
+                el.style.left = `${initialX + dx}px`;
+                el.style.top = `${initialY + dy}px`;
+                if(e.cancelable) e.preventDefault();
+            }
+
+            function dragEnd() {
+                isDragging = false;
+                document.removeEventListener('mousemove', drag);
+                document.removeEventListener('touchmove', drag);
+                document.removeEventListener('mouseup', dragEnd);
+                document.removeEventListener('touchend', dragEnd);
+            }
+        }
+
+        /* 7. UTILIDADES DE PORTAPAPELES Y ENLACES */
+        function copyCode(btn) {
+            const pre = btn.nextElementSibling;
+            const text = pre.innerText;
+            const textArea = document.createElement('textarea');
+            textArea.value = text;
+            document.body.appendChild(textArea);
+            textArea.select();
+            try {
+                document.execCommand('copy');
+                btn.textContent = '¡Copiado!';
+                setTimeout(() => btn.textContent = 'Copiar', 2000);
+            } catch (err) {
+                alert('No se pudo copiar automáticamente.');
+            }
+            document.body.removeChild(textArea);
+        }
+
+        function openExternalUrl(url) {
+            window.open(url, '_blank', 'noopener,noreferrer');
+        }
+
+        /* 8. INICIALIZACIÓN GLOBAL AL CARGAR LA VENTANA */
+        window.onload = function() {
+            renderQA();
+            buildDrawerLinks();
+            initSharedSvg();
+
+            // Configurar pestañas con clicks
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.onclick = () => switchTab(btn.dataset.tab);
+            });
+
+            // Botones flotantes
+            const floatHome = document.getElementById('float-home-btn');
+            const floatTop = document.getElementById('float-top-btn');
+            
+            makeDraggable(floatHome);
+            makeDraggable(floatTop);
+
+            floatHome.onclick = (e) => {
+                if(e.detail === 0 || !floatHome.classList.contains('dragging')) {
+                    switchTab('inicio');
+                }
+            };
+
+            floatTop.onclick = () => {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            };
+
+            // Barra de progreso de lectura
+            window.addEventListener('scroll', () => {
+                const winScroll = document.documentElement.scrollTop;
+                const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+                const scrolled = (winScroll / height) * 100;
+                document.getElementById('read-progress').style.width = scrolled + '%';
+            });
+
+            // Cerrar menú sándwich al pulsar fuera o Escape
+            document.addEventListener('click', (e) => {
+                if(!e.target.closest('#dr') && !e.target.closest('#mb')) {
+                    toggleDrawer(false);
+                }
+            });
+
+            addEventListener('keydown', (e) => {
+                if(e.key === 'Escape') toggleDrawer(false);
+            });
+
+            menuBtn.onclick = () => toggleDrawer();
+        };
+    </script>
+</body>
+</html>
